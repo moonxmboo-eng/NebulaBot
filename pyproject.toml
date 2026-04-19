@@ -1,0 +1,25 @@
+[project]
+name = "nebulabot"
+version = "0.1.0"
+description = "A modular AI chatbot framework inspired by AstrBot"
+authors = [
+    { name = "Antigravity", email = "assistant@example.com" }
+]
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "openai",
+    "google-generativeai",
+    "python-dotenv",
+    "pydantic",
+    "httpx"
+]
+requires-python = ">=3.10"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
