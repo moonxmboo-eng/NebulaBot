@@ -1,6 +1,7 @@
 from nebula.core.plugin import BasePlugin
 from nebula.core.message import Message, MessageType
 
+
 class EchoPlugin(BasePlugin):
     async def handle_message(self, message: Message) -> Message | None:
         if message.content.startswith("/echo "):

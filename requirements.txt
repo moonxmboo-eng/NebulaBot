@@ -1,8 +1,8 @@
 fastapi
 uvicorn
 openai
+anthropic
 google-generativeai
 python-dotenv
 pydantic
 httpx
-websockets

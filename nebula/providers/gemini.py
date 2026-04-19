@@ -1,7 +1,10 @@
 import os
+
 import google.generativeai as genai
-from ..core.provider import BaseProvider
+
 from ..core.message import Message, MessageType
+from ..core.provider import BaseProvider
+
 
 class GeminiProvider(BaseProvider):
     def __init__(self, api_key: str = None, model: str = "gemini-1.5-flash"):
@@ -11,16 +14,22 @@ class GeminiProvider(BaseProvider):
             genai.configure(api_key=self.api_key)
         self.model_name = model
 
-    async def chat(self, messages: list[Message]) -> Message:
+    def is_configured(self) -> bool:
+        return bool(self.api_key)
+
+    async def chat(self, messages: list[Message], system_prompt: str | None = None) -> Message:
         if not self.api_key:
             return Message(content="Gemini API Key not set.", role="assistant")
-            
+
         model = genai.GenerativeModel(self.model_name)
-        # Simplified history handling
-        chat = model.start_chat(history=[])
         try:
-            # We just send the last message for now as a simple example
-            response = await model.generate_content_async(messages[-1].content)
+            prompt_lines: list[str] = []
+            if system_prompt:
+                prompt_lines.append(f"System: {system_prompt}")
+            for item in messages[-20:]:
+                prompt_lines.append(f"{item.role.title()}: {item.content}")
+            prompt_lines.append("Assistant:")
+            response = await model.generate_content_async("\n\n".join(prompt_lines))
             return Message(
                 content=response.text,
                 role="assistant",

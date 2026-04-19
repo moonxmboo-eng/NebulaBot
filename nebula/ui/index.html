@@ -3,49 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NebulaBot Web UI</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <title>NebulaBot</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="background">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-    </div>
-    
-    <div class="chat-container">
-        <header class="chat-header">
-            <div class="bot-info">
-                <div class="avatar">🌌</div>
+    <div class="noise"></div>
+    <div class="shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-mark">NB</div>
                 <div>
+                    <p class="eyebrow">Agentic Chat Infra</p>
                     <h1>NebulaBot</h1>
-                    <p class="status">Online</p>
                 </div>
             </div>
-            <div class="header-actions">
-                <button id="theme-toggle">🌙</button>
-            </div>
-        </header>
-
-        <main class="chat-box" id="chat-box">
-            <div class="message bot-message">
-                <div class="message-content">
-                    Hello! I'm NebulaBot. How can I help you today?
+            <button id="new-session" class="primary-button" type="button">New Session</button>
+            <div class="status-card">
+                <p class="status-label">Runtime</p>
+                <div class="status-row">
+                    <span id="provider-pill" class="pill">loading</span>
+                    <span id="health-pill" class="pill muted">checking</span>
                 </div>
+                <p class="status-copy">
+                    AstrBot-style MVP with Web Chat, plugin commands, provider routing, and session memory.
+                </p>
             </div>
-        </main>
+            <section class="session-panel">
+                <div class="panel-title">
+                    <span>Sessions</span>
+                    <span id="session-count" class="mono">0</span>
+                </div>
+                <div id="session-list" class="session-list"></div>
+            </section>
+        </aside>
 
-        <footer class="chat-input-area">
-            <form id="chat-form">
-                <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" required>
-                <button type="submit" id="send-button">
-                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="css-i6dzq1"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                </button>
+        <main class="chat-stage">
+            <header class="chat-header">
+                <div>
+                    <p class="eyebrow">Web Console</p>
+                    <h2 id="chat-title">New Session</h2>
+                </div>
+                <div class="header-hint mono">/help · /echo · /persona</div>
+            </header>
+
+            <section id="chat-box" class="chat-box"></section>
+
+            <form id="chat-form" class="composer">
+                <label for="message-input" class="sr-only">Message</label>
+                <textarea id="message-input" rows="1" placeholder="Message NebulaBot..." required></textarea>
+                <button type="submit" class="primary-button">Send</button>
             </form>
-        </footer>
+        </main>
     </div>
+
+    <template id="message-template">
+        <article class="bubble">
+            <p class="bubble-role"></p>
+            <div class="bubble-content"></div>
+        </article>
+    </template>
 
     <script src="/static/script.js"></script>
 </body>

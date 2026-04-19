@@ -1,6 +1,8 @@
 from typing import Optional
+
 from nebula.core.plugin import BasePlugin
 from nebula.core.message import Message, MessageType
+
 
 class PersonaPlugin(BasePlugin):
     def __init__(self, name: str):
@@ -33,7 +35,10 @@ class PersonaPlugin(BasePlugin):
             # Here we just inject it into the user's message as a quick hack
             # to let the LLM know about the persona.
             original_content = message.content
-            message.content = f"System Instruction: You must act as {persona}. User says: {original_content}"
+            message.content = (
+                f"System Instruction: You must act as {persona}. "
+                f"User says: {original_content}"
+            )
 
         # Return None to let the message continue to the provider
         return None

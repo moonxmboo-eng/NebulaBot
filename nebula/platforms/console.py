@@ -1,7 +1,9 @@
 import asyncio
 import sys
+
 from ..core.platform import BasePlatform
 from ..core.message import Message, MessageContext, MessageType
+
 
 class ConsolePlatform(BasePlatform):
     def __init__(self):
@@ -30,9 +32,10 @@ class ConsolePlatform(BasePlatform):
                     session_id="console_session"
                 )
             )
-            
+
             if self.on_message_callback:
-                await self.on_message_callback(msg)
+                response = await self.on_message_callback(msg)
+                await self.send(response)
 
     async def send(self, message: Message):
         print(f"\n[Bot]: {message.content}\n")

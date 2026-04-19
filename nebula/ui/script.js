@@ -1,89 +1,153 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const chatBox = document.getElementById('chat-box');
-    const chatForm = document.getElementById('chat-form');
-    const messageInput = document.getElementById('message-input');
-    const themeToggle = document.getElementById('theme-toggle');
+const state = {
+    sessionId: null,
+    sessions: [],
+};
 
-    // Theme toggling
-    themeToggle.addEventListener('click', () => {
-        const currentTheme = document.body.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        document.body.setAttribute('data-theme', newTheme);
-        themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-    });
+const chatBox = document.getElementById("chat-box");
+const chatForm = document.getElementById("chat-form");
+const input = document.getElementById("message-input");
+const sessionList = document.getElementById("session-list");
+const sessionCount = document.getElementById("session-count");
+const chatTitle = document.getElementById("chat-title");
+const providerPill = document.getElementById("provider-pill");
+const healthPill = document.getElementById("health-pill");
+const messageTemplate = document.getElementById("message-template");
+const newSessionButton = document.getElementById("new-session");
 
-    // WebSocket Setup
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
-    let ws;
-    let reconnectAttempts = 0;
+function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+}
 
-    function connect() {
-        ws = new WebSocket(wsUrl);
+function renderMessage(role, content) {
+    const node = messageTemplate.content.firstElementChild.cloneNode(true);
+    node.classList.add(role === "user" ? "user" : "assistant");
+    node.querySelector(".bubble-role").textContent = role;
+    node.querySelector(".bubble-content").innerHTML = escapeHtml(content).replace(/\n/g, "<br>");
+    chatBox.appendChild(node);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
 
-        ws.onopen = () => {
-            console.log("Connected to NebulaBot");
-            reconnectAttempts = 0;
-            document.querySelector('.status').innerHTML = "Online";
-            document.querySelector('.status').style.color = "var(--primary)";
-        };
+function clearMessages() {
+    chatBox.innerHTML = "";
+}
 
-        ws.onmessage = (event) => {
-            appendMessage(event.data, 'bot');
-        };
-
-        ws.onclose = () => {
-            console.log("Disconnected. Reconnecting...");
-            document.querySelector('.status').innerHTML = "Reconnecting...";
-            document.querySelector('.status').style.color = "#ef4444";
-            
-            // Reconnect backoff
-            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
-            reconnectAttempts++;
-            setTimeout(connect, delay);
-        };
-        
-        ws.onerror = (err) => {
-            console.error("WebSocket Error:", err);
-            ws.close();
-        };
+async function fetchJson(url, options) {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
     }
+    return response.json();
+}
 
-    connect();
+async function createSession() {
+    const data = await fetchJson("/api/sessions", { method: "POST" });
+    state.sessionId = data.session_id;
+    chatTitle.textContent = "New Session";
+    clearMessages();
+    renderMessage(
+        "assistant",
+        "NebulaBot is ready. Try /help to inspect the built-in commands."
+    );
+    await refreshSessions();
+}
 
-    function appendMessage(text, sender) {
-        const messageDiv = document.createElement('div');
-        messageDiv.classList.add('message', `${sender}-message`);
-        
-        const contentDiv = document.createElement('div');
-        contentDiv.classList.add('message-content');
-        contentDiv.textContent = text;
-        
-        messageDiv.appendChild(contentDiv);
-        chatBox.appendChild(messageDiv);
-        
-        // Scroll to bottom
-        chatBox.scrollTop = chatBox.scrollHeight;
-    }
+async function refreshHealth() {
+    const health = await fetchJson("/api/health");
+    const providers = await fetchJson("/api/providers");
+    providerPill.textContent = providers.default;
+    healthPill.textContent = health.status;
+}
 
-    chatForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const text = messageInput.value.trim();
-        if (!text) return;
+function renderSessions() {
+    sessionList.innerHTML = "";
+    sessionCount.textContent = String(state.sessions.length);
 
-        // Display user message
-        appendMessage(text, 'user');
-        
-        // Send to server
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(text);
-        } else {
-            appendMessage("Error: Connection lost.", 'bot');
+    for (const session of state.sessions) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "session-item";
+        if (session.session_id === state.sessionId) {
+            button.classList.add("active");
         }
+        button.innerHTML = `
+            <span class="session-title">${escapeHtml(session.title)}</span>
+            <span class="session-meta mono">${session.message_count} msgs</span>
+        `;
+        button.addEventListener("click", async () => {
+            state.sessionId = session.session_id;
+            chatTitle.textContent = session.title;
+            await loadMessages(session.session_id);
+            renderSessions();
+        });
+        sessionList.appendChild(button);
+    }
+}
 
-        // Clear input
-        messageInput.value = '';
-        messageInput.focus();
+async function refreshSessions() {
+    state.sessions = await fetchJson("/api/sessions");
+    if (!state.sessionId && state.sessions.length) {
+        state.sessionId = state.sessions[0].session_id;
+    }
+    renderSessions();
+}
+
+async function loadMessages(sessionId) {
+    clearMessages();
+    const messages = await fetchJson(`/api/sessions/${sessionId}/messages`);
+    if (!messages.length) {
+        renderMessage(
+            "assistant",
+            "Empty session. Ask something or use a plugin command."
+        );
+        return;
+    }
+    for (const message of messages) {
+        renderMessage(message.role, message.content);
+    }
+}
+
+chatForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const content = input.value.trim();
+    if (!content || !state.sessionId) {
+        return;
+    }
+
+    renderMessage("user", content);
+    input.value = "";
+
+    const reply = await fetchJson("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: state.sessionId, content }),
     });
+
+    renderMessage("assistant", reply.reply);
+    await refreshSessions();
+});
+
+newSessionButton.addEventListener("click", createSession);
+
+input.addEventListener("input", () => {
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
+});
+
+async function bootstrap() {
+    await refreshHealth();
+    await refreshSessions();
+    if (!state.sessionId) {
+        await createSession();
+    } else {
+        const current = state.sessions.find((item) => item.session_id === state.sessionId);
+        chatTitle.textContent = current ? current.title : "Session";
+        await loadMessages(state.sessionId);
+    }
+}
+
+bootstrap().catch((error) => {
+    clearMessages();
+    renderMessage("assistant", `Failed to load NebulaBot UI: ${error.message}`);
 });
